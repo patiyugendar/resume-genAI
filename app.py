@@ -103,18 +103,25 @@ def render_html(resume_text):
     lines = resume_text.split('\n')
     parts = ['<div class="resume-preview">']
     first = True; second = False; section = ""
+    last_was_section = False  # track if previous line was a section header
 
     for raw in lines:
         ls = clean_md(raw)
         if not ls:
-            parts.append('<div style="margin:2px 0"></div>'); continue
+            # Skip blank lines right after section header — removes the gap
+            if last_was_section:
+                continue
+            parts.append('<div style="margin:2px 0"></div>')
+            last_was_section = False
+            continue
+
+        last_was_section = False
 
         if first:
             parts.append(f'<div class="r-name">{ls}</div>')
             first = False; second = True; continue
 
         if second:
-            # Contact line — render at 9pt, centered
             parts.append(f'<div class="r-contact">{ls}</div>')
             parts.append('<hr class="r-divider">')
             second = False; continue
@@ -123,6 +130,7 @@ def render_html(resume_text):
             section = ls.upper()
             parts.append(f'<div class="r-section">{ls}</div>')
             parts.append('<hr class="r-divider">')
+            last_was_section = True
             continue
 
         if ls.startswith('•') or ls.startswith('-'):
@@ -360,11 +368,18 @@ def build_pdf(resume_text):
 
     story = []
     first = True; second = False; cur_section = ""
+    last_was_section = False  # skip blank lines right after section header
 
     for raw in resume_text.split('\n'):
         line = clean_md(raw)
         if not line:
-            story.append(Spacer(1, 2)); continue
+            if last_was_section:
+                continue  # skip blank line immediately after section header
+            story.append(Spacer(1, 2))
+            last_was_section = False
+            continue
+
+        last_was_section = False
 
         if first:
             story.append(Paragraph(line, nameS))
@@ -382,6 +397,7 @@ def build_pdf(resume_text):
             story.append(Paragraph(line, secS))
             story.append(HRFlowable(width="100%", thickness=0.8,
                                     color=colors.black, spaceAfter=2, spaceBefore=1))
+            last_was_section = True
             continue
 
         if line.startswith('•') or line.startswith('-'):
